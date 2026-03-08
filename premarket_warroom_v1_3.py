@@ -81,7 +81,7 @@ SECTOR_NAMES = {
     "XLY": "非必需消費",
     "SMH": "半導體",
 }
-CORE_MARKET_SYMBOLS = ["SPY", "QQQ", "SMH", "^VIX", "CL=F", "GC=F", "DX-Y.NYB"] + SECTOR_ETFS
+CORE_MARKET_SYMBOLS = ["SPY", "QQQ", "^VIX", "CL=F", "GC=F", "DX-Y.NYB"] + SECTOR_ETFS
 
 UP_COLOR = "#26a69a"
 DOWN_COLOR = "#ef5350"
@@ -921,7 +921,14 @@ def _render_all_tabs(data: dict[str, Any]) -> None:
 
         ai_response = data.get("ai_response", "")
         if ai_response:
-            st.info(f"🤖 AI 盤前白話解說\n\n{ai_response}")
+            ai_sections = _parse_ai_response(ai_response)
+            premarket_brief = ai_sections.get("盤前解說") or ai_response.strip()
+            today_strategy = ai_sections.get("今日策略") or "N/A"
+            event_context = ai_sections.get("事件脈絡") or "無特殊事件，以數據為主要依據"
+
+            st.info(f"🤖 盤前解說\n\n{premarket_brief}")
+            st.success(f"🎯 今日策略：{today_strategy}")
+            st.caption(f"📰 事件脈絡：{event_context}")
         else:
             st.warning("請輸入 API Key 以啟用 AI 解說功能")
 
@@ -1076,17 +1083,17 @@ def main() -> None:
 
     st.sidebar.header("📊 War Room Setup", divider="rainbow")
     gemini_api_key = st.sidebar.text_input(
-        "🔍 Gemini API Key（新聞搜尋主力）",
+        "🔍 Gemini API Key（新聞搜尋 + 分析備援）",
         type="password",
-        help="用於 Google Search Grounding 自動搜尋今日財經新聞",
+        help="用於 Google Search Grounding 搜尋今日財經新聞；OpenAI 分析失敗時自動接手",
     )
     openai_api_key = st.sidebar.text_input(
-        "🤖 OpenAI API Key（分析備援）",
+        "🤖 OpenAI API Key（分析主力）",
         type="password",
-        help="用於白話解說主力分析，Gemini 失敗時自動接手",
+        help="用於白話解說主力分析（第一順位）",
     )
     fred_api_key = st.sidebar.text_input("請輸入 FRED API Key", type="password")
-    st.sidebar.caption("💡 兩個 Key 均非必填：僅 Gemini=新聞+分析；僅 OpenAI=純數據分析；都不填=僅規則引擎")
+    st.sidebar.caption("💡 兩個 Key 均非必填：僅 Gemini=新聞+分析；僅 OpenAI=純數據分析；都填=OpenAI 主力分析＋Gemini 新聞與備援；都不填=僅規則引擎")
     st.sidebar.divider()
 
     default_watchlist = "NVDA\nTSM\nAMD\nGOOG\nPLTR"
